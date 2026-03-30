@@ -516,6 +516,7 @@ struct MdSpi;
 
 struct MdApi {
     MdApi(const MdSpi &gateway, rust::String flow_path, bool is_using_udp, bool is_multicast, bool is_production_mode);
+    ~MdApi();
 
     rust::String GetApiVersion() const;
     void Init() const;

@@ -7,6 +7,16 @@ MdApi::MdApi(const MdSpi &gateway, rust::String flow_path, bool is_using_udp, bo
     api->RegisterSpi(spi);
 }
 
+MdApi::~MdApi() {
+    if (api) {
+        api->RegisterSpi(nullptr);
+        api->Release();
+        api = nullptr;
+    }
+    delete spi;
+    spi = nullptr;
+}
+
 std::unique_ptr<MdApi> CreateMdApi(const MdSpi &gateway, rust::String flow_path, bool is_using_udp, bool is_multicast, bool is_production_mode) {
     return std::make_unique<MdApi>(gateway, flow_path, is_using_udp, is_multicast, is_production_mode);
 }

@@ -516,6 +516,7 @@ struct TraderSpi;
 
 struct TraderApi {
     TraderApi(const TraderSpi &gateway, rust::String flow_path, bool is_production_mode);
+    ~TraderApi();
     FrontInfoField GetFrontInfo() const;
 
     rust::String GetApiVersion() const;

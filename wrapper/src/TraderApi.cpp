@@ -7,6 +7,16 @@ TraderApi::TraderApi(const TraderSpi &gateway, rust::String flow_path, bool is_p
     api->RegisterSpi(spi);
 }
 
+TraderApi::~TraderApi() {
+    if (api) {
+        api->RegisterSpi(nullptr);
+        api->Release();
+        api = nullptr;
+    }
+    delete spi;
+    spi = nullptr;
+}
+
 std::unique_ptr<TraderApi> CreateTraderApi(const TraderSpi &gateway, rust::String flow_path, bool is_production_mode) {
     return std::make_unique<TraderApi>(gateway, flow_path, is_production_mode);
 }

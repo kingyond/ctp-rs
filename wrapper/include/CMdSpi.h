@@ -11,6 +11,7 @@ class CMdSpi : public CThostFtdcMdSpi
 {
 public:
     explicit CMdSpi(const MdApi *gateway);
+    ~CMdSpi() = default;
 
     void OnFrontConnected() override;
     void OnFrontDisconnected(int32_t nReason) override;

@@ -11,6 +11,7 @@ class CTraderSpi : public CThostFtdcTraderSpi
 {
 public:
     explicit CTraderSpi(const TraderApi *gateway);
+    ~CTraderSpi() = default;
 
     void OnFrontConnected() override;
     void OnFrontDisconnected(int32_t nReason) override;
