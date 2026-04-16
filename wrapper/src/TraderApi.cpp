@@ -1,5 +1,9 @@
 #include "ctp-rs/wrapper/include/TraderApi.h"
 #include "ctp-rs/wrapper/include/Converter.h"
+#include <thread>
+#include <chrono>
+#include <atomic>
+#include <cstdio>
 
 TraderApi::TraderApi(const TraderSpi &gateway, rust::String flow_path, bool is_production_mode) : gateway(gateway) {
     spi = new CTraderSpi(this);
@@ -9,8 +13,37 @@ TraderApi::TraderApi(const TraderSpi &gateway, rust::String flow_path, bool is_p
 
 TraderApi::~TraderApi() {
     if (api) {
-        api->RegisterSpi(nullptr);
-        api->Release();
+        api->RegisterSpi(nullptr);  // Safe: just sets a pointer
+
+        // Phase 4: Timeout-protected Release+Join to prevent CTP SDK exit()
+        // CTP SDK Release()+Join() may call exit(1) when connection was never
+        // established. Use a worker thread with 3s timeout to contain the risk.
+        auto *api_ptr = api;
+        std::atomic<bool> done{false};
+        std::thread worker([api_ptr, &done]() {
+            api_ptr->Release();
+            api_ptr->Join();
+            done.store(true, std::memory_order_release);
+        });
+
+        // Wait up to 3 seconds for Release+Join to complete
+        auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+        while (!done.load(std::memory_order_acquire)) {
+            if (std::chrono::steady_clock::now() >= deadline) {
+                fprintf(stderr, "[CTP] TraderApi::~TraderApi: Release+Join timed out (3s), "
+                                "detaching worker thread and leaking api to avoid exit()\n");
+                worker.detach();
+                // Leak api — do NOT set api = nullptr, do NOT delete
+                // The worker thread may still be inside CTP SDK code;
+                // leaking is safer than crashing the process.
+                api = nullptr;  // Prevent double-free if destructor called again
+                delete spi;
+                spi = nullptr;
+                return;  // Early return, skip normal cleanup below
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+        worker.join();
         api = nullptr;
     }
     delete spi;
